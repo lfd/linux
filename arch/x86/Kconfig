@@ -769,6 +769,14 @@ config KVM_DEBUG_FS
 
 source "arch/x86/lguest/Kconfig"
 
+config JAILHOUSE_GUEST
+	bool "Jailhouse non-root cell support"
+	depends on PARAVIRT
+	---help---
+	  This option allows to run Linux as guest in a Jailhouse non-root
+	  cell. You can leave this option disabled if you only want to start
+	  Jailhouse and run Linux afterwards in the root cell.
+
 config PARAVIRT_TIME_ACCOUNTING
 	bool "Paravirtual steal time accounting"
 	depends on PARAVIRT
