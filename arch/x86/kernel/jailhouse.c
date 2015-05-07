@@ -167,6 +167,11 @@ static unsigned long jailhouse_calibrate_tsc(void)
 	return 0;
 }
 
+static unsigned int x2apic_get_apic_id(unsigned long id)
+{
+        return id;
+}
+
 static void __init jailhouse_init_platform(void)
 {
 	x86_init.timers.timer_init	= jailhouse_timer_init;
@@ -176,6 +181,14 @@ static void __init jailhouse_init_platform(void)
 	x86_platform.get_wallclock = jailhouse_get_wallclock;
 	x86_platform.calibrate_cpu = jailhouse_calibrate_cpu;
 	x86_platform.calibrate_tsc = jailhouse_calibrate_tsc;
+
+	if (x2apic_enabled()) {
+		apic->read = native_apic_msr_read;
+		apic->write = native_apic_msr_write;
+		apic->get_apic_id = x2apic_get_apic_id;
+	}
+	register_lapic_address(0xfee00000);
+	generic_processor_info(boot_cpu_physical_apicid, boot_cpu_apic_version);
 
 	pci_probe = 0;
 	pci_direct_init(1);
