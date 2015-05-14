@@ -772,6 +772,8 @@ source "arch/x86/lguest/Kconfig"
 config JAILHOUSE_GUEST
 	bool "Jailhouse non-root cell support"
 	depends on PARAVIRT
+	select ACPI
+	select X86_PM_TIMER
 	---help---
 	  This option allows to run Linux as guest in a Jailhouse non-root
 	  cell. You can leave this option disabled if you only want to start
