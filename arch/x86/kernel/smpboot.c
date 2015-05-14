@@ -77,6 +77,7 @@
 #include <asm/i8259.h>
 #include <asm/realmode.h>
 #include <asm/misc.h>
+#include <asm/jailhouse_para.h>
 
 /* Number of siblings per CPU package */
 int smp_num_siblings = 1;
@@ -1002,7 +1003,8 @@ static int do_boot_cpu(int apicid, int cpu, struct task_struct *idle)
 	 * the targeted processor.
 	 */
 
-	if (get_uv_system_type() != UV_NON_UNIQUE_APIC) {
+	if (get_uv_system_type() != UV_NON_UNIQUE_APIC &&
+	    !jailhouse_paravirt()) {
 
 		pr_debug("Setting warm reset code and vector.\n");
 
@@ -1074,7 +1076,8 @@ static int do_boot_cpu(int apicid, int cpu, struct task_struct *idle)
 	/* mark "stuck" area as not stuck */
 	*trampoline_status = 0;
 
-	if (get_uv_system_type() != UV_NON_UNIQUE_APIC) {
+	if (get_uv_system_type() != UV_NON_UNIQUE_APIC &&
+	    !jailhouse_paravirt()) {
 		/*
 		 * Cleanup possible dangling ends...
 		 */

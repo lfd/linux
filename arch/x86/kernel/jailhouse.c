@@ -22,6 +22,8 @@
 struct jailhouse_setup_data {
 	struct setup_data header;
 	u16 pm_timer_address;
+	u16 num_cpus;
+	u8 cpu_ids[255];
 };
 
 /* temporary hack */
@@ -182,6 +184,7 @@ static void __init jailhouse_init_platform(void)
 {
 	u64 pa_data = boot_params.hdr.setup_data;
 	struct jailhouse_setup_data *data;
+	unsigned int cpu;
 
 	x86_init.timers.timer_init	= jailhouse_timer_init;
 	x86_init.irqs.pre_vector_init	= x86_init_noop;
@@ -201,7 +204,10 @@ static void __init jailhouse_init_platform(void)
 		apic->get_apic_id = x2apic_get_apic_id;
 	}
 	register_lapic_address(0xfee00000);
-	generic_processor_info(boot_cpu_physical_apicid, boot_cpu_apic_version);
+	for (cpu = 0; cpu < data->num_cpus; cpu++)
+		generic_processor_info(data->cpu_ids[cpu],
+				       boot_cpu_apic_version);
+	smp_found_config = 1;
 
 	early_memunmap(data, sizeof(*data));
 
