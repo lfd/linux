@@ -192,6 +192,7 @@ static void __init jailhouse_init_platform(void)
 
 	pci_probe = 0;
 	pci_direct_init(1);
+	pcibios_last_bus = 0xff;
 }
 
 bool jailhouse_paravirt(void)
