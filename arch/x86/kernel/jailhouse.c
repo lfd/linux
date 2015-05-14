@@ -17,6 +17,12 @@
 #include <asm/hypervisor.h>
 #include <asm/i8259.h>
 #include <asm/pci_x86.h>
+#include <asm/setup.h>
+
+struct jailhouse_setup_data {
+	struct setup_data header;
+	u16 pm_timer_address;
+};
 
 /* temporary hack */
 #include <linux/serial_8250.h>
@@ -174,6 +180,9 @@ static unsigned int x2apic_get_apic_id(unsigned long id)
 
 static void __init jailhouse_init_platform(void)
 {
+	u64 pa_data = boot_params.hdr.setup_data;
+	struct jailhouse_setup_data *data;
+
 	x86_init.timers.timer_init	= jailhouse_timer_init;
 	x86_init.irqs.pre_vector_init	= x86_init_noop;
 	legacy_pic			= &null_legacy_pic;
@@ -182,6 +191,10 @@ static void __init jailhouse_init_platform(void)
 	x86_platform.calibrate_cpu = jailhouse_calibrate_cpu;
 	x86_platform.calibrate_tsc = jailhouse_calibrate_tsc;
 
+	data = early_memremap(pa_data, sizeof(*data));
+	pmtmr_ioport = data->pm_timer_address;
+	printk(KERN_INFO "Jailhouse: PM-Timer IO Port: %#x\n", pmtmr_ioport);
+
 	if (x2apic_enabled()) {
 		apic->read = native_apic_msr_read;
 		apic->write = native_apic_msr_write;
@@ -189,6 +202,8 @@ static void __init jailhouse_init_platform(void)
 	}
 	register_lapic_address(0xfee00000);
 	generic_processor_info(boot_cpu_physical_apicid, boot_cpu_apic_version);
+
+	early_memunmap(data, sizeof(*data));
 
 	pci_probe = 0;
 	pci_direct_init(1);
