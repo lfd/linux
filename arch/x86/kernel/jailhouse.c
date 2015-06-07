@@ -223,9 +223,14 @@ bool jailhouse_paravirt(void)
 	return jailhouse_cpuid_base() != 0;
 }
 
+static bool jailhouse_x2apic_available(void)
+{
+	return x2apic_enabled();
+}
+
 const struct hypervisor_x86 x86_hyper_jailhouse __refconst = {
 	.name			= "Jailhouse",
 	.detect			= jailhouse_detect,
 	.init_platform		= jailhouse_init_platform,
-	.x2apic_available	= jailhouse_paravirt,
+	.x2apic_available	= jailhouse_x2apic_available,
 };
