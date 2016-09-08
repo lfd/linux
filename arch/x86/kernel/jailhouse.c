@@ -199,8 +199,10 @@ static void __init jailhouse_init_platform(void)
 	printk(KERN_INFO "Jailhouse: PM-Timer IO Port: %#x\n", pmtmr_ioport);
 
 	if (x2apic_enabled()) {
+#ifdef CONFIG_X86_X2APIC
 		apic->read = native_apic_msr_read;
 		apic->write = native_apic_msr_write;
+#endif
 		apic->get_apic_id = x2apic_get_apic_id;
 	}
 	register_lapic_address(0xfee00000);
