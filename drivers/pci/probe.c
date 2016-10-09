@@ -19,6 +19,10 @@
 #include <linux/pm_runtime.h>
 #include "pci.h"
 
+#ifdef CONFIG_X86
+#include <asm/jailhouse_para.h>
+#endif
+
 #define CARDBUS_LATENCY_TIMER	176	/* secondary latency timer */
 #define CARDBUS_RESERVE_BUSNR	3
 
@@ -2237,12 +2241,18 @@ EXPORT_SYMBOL_GPL(pcie_bus_configure_settings);
 unsigned int pci_scan_child_bus(struct pci_bus *bus)
 {
 	unsigned int devfn, pass, max = bus->busn_res.start;
+	unsigned int increment = 8;
 	struct pci_dev *dev;
 
 	dev_dbg(&bus->dev, "scanning bus\n");
 
+#ifdef CONFIG_X86
+	if (jailhouse_paravirt())
+		increment = 1;
+#endif
+
 	/* Go find them, Rover! */
-	for (devfn = 0; devfn < 0x100; devfn += 8)
+	for (devfn = 0; devfn < 0x100; devfn += increment)
 		pci_scan_slot(bus, devfn);
 
 	/* Reserve buses for SR-IOV capability. */
