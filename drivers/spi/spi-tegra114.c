@@ -23,6 +23,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/dmapool.h>
 #include <linux/err.h>
+#include <linux/gpio.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
@@ -661,6 +662,13 @@ static void tegra_spi_deinit_dma_param(struct tegra_spi_data *tspi,
 	dma_release_channel(dma_chan);
 }
 
+static inline void tegra_spi_gpio_set_cs(struct spi_device *spi, bool enable) {
+	if (spi->mode & SPI_CS_HIGH)
+		enable = !enable;
+
+	gpio_set_value(spi->cs_gpio, !enable);
+}
+
 static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 		struct spi_transfer *t, bool is_first_of_msg)
 {
@@ -705,11 +713,17 @@ static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 		} else
 			tegra_spi_writel(tspi, command1, SPI_COMMAND1);
 
-		command1 |= SPI_CS_SW_HW;
-		if (spi->mode & SPI_CS_HIGH)
-			command1 |= SPI_CS_SW_VAL;
-		else
-			command1 &= ~SPI_CS_SW_VAL;
+		/* software driven cs-line? */
+		if (gpio_is_valid(spi->cs_gpio))
+			tegra_spi_gpio_set_cs(spi, true);
+		else {
+			/* configure hardware cs-line */
+			command1 |= SPI_CS_SW_HW;
+			if (spi->mode & SPI_CS_HIGH)
+				command1 |= SPI_CS_SW_VAL;
+			else
+				command1 &= ~SPI_CS_SW_VAL;
+		}
 
 		tegra_spi_writel(tspi, 0, SPI_COMMAND2);
 	} else {
@@ -763,6 +777,18 @@ static int tegra_spi_setup(struct spi_device *spi)
 	u32 val;
 	unsigned long flags;
 	int ret;
+
+	/* are we using a GPIO CS line? */
+	if (gpio_is_valid(spi->cs_gpio)) {
+		ret = devm_gpio_request(&spi->dev, spi->cs_gpio, DRIVER_NAME);
+		if (ret) {
+			dev_err(&spi->dev, "can't get CS GPIO %i\n",
+				spi->cs_gpio);
+			return ret;
+		}
+		gpio_direction_output(spi->cs_gpio, 1);
+		tegra_spi_gpio_set_cs(spi, false);
+	}
 
 	dev_dbg(&spi->dev, "setup %d bpw, %scpol, %scpha, %dHz\n",
 		spi->bits_per_word,
@@ -856,6 +882,10 @@ complete_xfer:
 			tegra_spi_writel(tspi, tspi->def_command1_reg,
 					SPI_COMMAND1);
 			tegra_spi_transfer_delay(xfer->delay_usecs);
+
+			if (gpio_is_valid(spi->cs_gpio))
+				tegra_spi_gpio_set_cs(spi, false);
+
 			goto exit;
 		} else if (list_is_last(&xfer->transfer_list,
 					&msg->transfers)) {
@@ -866,6 +896,9 @@ complete_xfer:
 						SPI_COMMAND1);
 				tegra_spi_transfer_delay(xfer->delay_usecs);
 			}
+
+			if (gpio_is_valid(spi->cs_gpio))
+				tegra_spi_gpio_set_cs(spi, false);
 		} else if (xfer->cs_change) {
 			tegra_spi_writel(tspi, tspi->def_command1_reg,
 					SPI_COMMAND1);
