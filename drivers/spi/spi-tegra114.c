@@ -35,6 +35,8 @@
 #include <linux/reset.h>
 #include <linux/spi/spi.h>
 
+#define DRIVER_NAME "spi-tegra114"
+
 #define SPI_COMMAND1				0x000
 #define SPI_BIT_LENGTH(x)			(((x) & 0x1f) << 0)
 #define SPI_PACKED				(1 << 5)
@@ -1222,7 +1224,7 @@ static const struct dev_pm_ops tegra_spi_pm_ops = {
 };
 static struct platform_driver tegra_spi_driver = {
 	.driver = {
-		.name		= "spi-tegra114",
+		.name		= DRIVER_NAME,
 		.pm		= &tegra_spi_pm_ops,
 		.of_match_table	= tegra_spi_of_match,
 	},
