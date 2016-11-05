@@ -778,18 +778,6 @@ static int tegra_spi_setup(struct spi_device *spi)
 	unsigned long flags;
 	int ret;
 
-	/* are we using a GPIO CS line? */
-	if (gpio_is_valid(spi->cs_gpio)) {
-		ret = devm_gpio_request(&spi->dev, spi->cs_gpio, DRIVER_NAME);
-		if (ret) {
-			dev_err(&spi->dev, "can't get CS GPIO %i\n",
-				spi->cs_gpio);
-			return ret;
-		}
-		gpio_direction_output(spi->cs_gpio, 1);
-		tegra_spi_gpio_set_cs(spi, false);
-	}
-
 	dev_dbg(&spi->dev, "setup %d bpw, %scpol, %scpha, %dHz\n",
 		spi->bits_per_word,
 		spi->mode & SPI_CPOL ? "" : "~",
@@ -808,6 +796,7 @@ static int tegra_spi_setup(struct spi_device *spi)
 		val &= ~SPI_CS_POL_INACTIVE(spi->chip_select);
 	else
 		val |= SPI_CS_POL_INACTIVE(spi->chip_select);
+	tegra_spi_gpio_set_cs(spi, false);
 	tspi->def_command1_reg = val;
 	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
 	spin_unlock_irqrestore(&tspi->lock, flags);
@@ -1067,7 +1056,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	struct spi_master	*master;
 	struct tegra_spi_data	*tspi;
 	struct resource		*r;
-	int ret, spi_irq;
+	int cs_gpio, i, ret, spi_irq;
 
 	master = spi_alloc_master(&pdev->dev, sizeof(*tspi));
 	if (!master) {
@@ -1162,6 +1151,33 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "can not register to master err %d\n", ret);
 		goto exit_pm_disable;
 	}
+
+	/* request CS-GPIO lines */
+	if (master->num_chipselect && master->cs_gpios)
+		for (i = 0; i < master->num_chipselect; i++) {
+			cs_gpio = master->cs_gpios[i];
+			/* are we using a GPIO CS line? */
+			if (!gpio_is_valid(cs_gpio))
+				continue;
+			ret = devm_gpio_request(&pdev->dev, cs_gpio,
+						DRIVER_NAME);
+			if (ret) {
+				dev_err(&pdev->dev,
+					"can't get CS GPIO %i\n",
+					cs_gpio);
+				return ret;
+			}
+
+			ret = gpio_direction_output(cs_gpio, 1);
+			if (ret) {
+				dev_err(&pdev->dev,
+					"can't set GPIO %i as output\n",
+					cs_gpio);
+				return ret;
+			}
+			gpio_set_value(cs_gpio, true);
+		}
+
 	return ret;
 
 exit_pm_disable:
