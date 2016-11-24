@@ -37,6 +37,8 @@
 #define IVSHM_NET_STATE_READY	2
 #define IVSHM_NET_STATE_RUN	3
 
+#define IVSHM_NET_FLAG_RUN	0
+
 #define IVSHM_NET_MTU_MIN 256
 #define IVSHM_NET_MTU_MAX 65535
 #define IVSHM_NET_MTU_DEF 16384
@@ -96,6 +98,8 @@ struct ivshm_net {
 
 	u32 lstate;
 	u32 rstate;
+
+	unsigned long flags;
 
 	struct workqueue_struct *state_wq;
 	struct work_struct state_work;
@@ -530,10 +534,30 @@ static void ivshm_net_run(struct net_device *ndev)
 {
 	struct ivshm_net *in = netdev_priv(ndev);
 
+	if (in->lstate < IVSHM_NET_STATE_READY)
+		return;
+
+	if (!netif_running(ndev))
+		return;
+
+	if (test_and_set_bit(IVSHM_NET_FLAG_RUN, &in->flags))
+		return;
+
 	netif_start_queue(ndev);
 	napi_enable(&in->napi);
 	napi_schedule(&in->napi);
 	ivshm_net_set_state(in, IVSHM_NET_STATE_RUN);
+}
+
+static void ivshm_net_do_stop(struct net_device *ndev)
+{
+	struct ivshm_net *in = netdev_priv(ndev);
+
+	if (!test_and_clear_bit(IVSHM_NET_FLAG_RUN, &in->flags))
+		return;
+
+	netif_stop_queue(ndev);
+	napi_disable(&in->napi);
 }
 
 static void ivshm_net_state_change(struct work_struct *work)
@@ -561,21 +585,13 @@ static void ivshm_net_state_change(struct work_struct *work)
 		break;
 
 	case IVSHM_NET_STATE_READY:
+	case IVSHM_NET_STATE_RUN:
 		if (rstate >= IVSHM_NET_STATE_READY) {
 			netif_carrier_on(ndev);
-			if (ndev->flags & IFF_UP)
-				ivshm_net_run(ndev);
+			ivshm_net_run(ndev);
 		} else {
 			netif_carrier_off(ndev);
-			ivshm_net_set_state(in, IVSHM_NET_STATE_RESET);
-		}
-		break;
-
-	case IVSHM_NET_STATE_RUN:
-		if (rstate < IVSHM_NET_STATE_READY) {
-			netif_stop_queue(ndev);
-			napi_disable(&in->napi);
-			netif_carrier_off(ndev);
+			ivshm_net_do_stop(ndev);
 			ivshm_net_set_state(in, IVSHM_NET_STATE_RESET);
 		}
 		break;
@@ -585,18 +601,13 @@ static void ivshm_net_state_change(struct work_struct *work)
 	WRITE_ONCE(in->rstate, rstate);
 }
 
-static bool ivshm_net_check_state(struct net_device *ndev)
+static void ivshm_net_check_state(struct net_device *ndev)
 {
 	struct ivshm_net *in = netdev_priv(ndev);
 	u32 rstate = readl(&in->ivshm_regs->rstate);
 
-	if (rstate != READ_ONCE(in->rstate) ||
-	    in->lstate != IVSHM_NET_STATE_RUN) {
+	if (rstate != in->rstate || !test_bit(IVSHM_NET_FLAG_RUN, &in->flags))
 		queue_work(in->state_wq, &in->state_work);
-		return false;
-	}
-
-	return true;
 }
 
 static irqreturn_t ivshm_net_int(int irq, void *data)
@@ -618,24 +629,15 @@ static int ivshm_net_open(struct net_device *ndev)
 
 	netdev_reset_queue(ndev);
 	ndev->operstate = IF_OPER_UP;
-
-	if (in->lstate == IVSHM_NET_STATE_READY)
-		ivshm_net_run(ndev);
+	ivshm_net_run(ndev);
 
 	return 0;
 }
 
 static int ivshm_net_stop(struct net_device *ndev)
 {
-	struct ivshm_net *in = netdev_priv(ndev);
-
 	ndev->operstate = IF_OPER_DOWN;
-
-	if (in->lstate == IVSHM_NET_STATE_RUN) {
-		napi_disable(&in->napi);
-		netif_stop_queue(ndev);
-		ivshm_net_set_state(in, IVSHM_NET_STATE_READY);
-	}
+	ivshm_net_do_stop(ndev);
 
 	return 0;
 }
