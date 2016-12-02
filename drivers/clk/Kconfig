@@ -209,6 +209,12 @@ config COMMON_CLK_VC5
 	  This driver supports the IDT VersaClock5 programmable clock
 	  generator.
 
+config COMMON_CLK_JAILHOUSE
+	bool "Clock driver for Jailhouse"
+	depends on ARM
+	---help---
+	  Support for Jailhouse clocks
+
 source "drivers/clk/bcm/Kconfig"
 source "drivers/clk/hisilicon/Kconfig"
 source "drivers/clk/mediatek/Kconfig"

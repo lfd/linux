@@ -15,6 +15,8 @@ ifeq ($(CONFIG_OF), y)
 obj-$(CONFIG_COMMON_CLK)	+= clk-conf.o
 endif
 
+CFLAGS_clk-jailhouse.o = -DDEBUG
+
 # hardware specific clock types
 # please keep this section sorted lexicographically by file path name
 obj-$(CONFIG_MACH_ASM9260)		+= clk-asm9260.o
@@ -49,6 +51,7 @@ obj-$(CONFIG_ARCH_VT8500)		+= clk-vt8500.o
 obj-$(CONFIG_COMMON_CLK_VC5)		+= clk-versaclock5.o
 obj-$(CONFIG_COMMON_CLK_WM831X)		+= clk-wm831x.o
 obj-$(CONFIG_COMMON_CLK_XGENE)		+= clk-xgene.o
+obj-$(CONFIG_COMMON_CLK_JAILHOUSE)	+= clk-jailhouse.o
 
 # please keep this section sorted lexicographically by directory path name
 obj-$(CONFIG_COMMON_CLK_AT91)		+= at91/
