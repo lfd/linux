@@ -194,6 +194,13 @@ static int set_rate(struct clk_hw *hw, unsigned long rate,
 	struct jailhouse_clk_gate *gate = to_jailhouse_clk_gate(hw);
 
 	pr_debug("JH: set_rate: ID = %d, rate = %lu\n", gate->id, rate);
+
+	if (gate->id == 1) {
+		pr_debug(" JH: SPI Sonderbehandlung\n");
+		writel_relaxed(0xff, gate->base + 0x134);
+		return 0;
+	}
+
 	return -EIO;
 }
 
