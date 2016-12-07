@@ -63,8 +63,9 @@ struct jailhouse_gate {
 
 static const struct jailhouse_gate gates[] = {
 	GATE("I2C1", "I2C",   0x300, 0x304, 0x320, 0x324, 12), /* I2C1 of Jetson TK1 */
-	GATE("SPI1", "SPI",   0x308, 0x30c, 0x328, 0x32c, 9), /* SPI1 of Jetson TK1 */
+	GATE("I2C2", "I2C",   0x308, 0x30c, 0x328, 0x32c, 22), /* I2C2 of Jetson TK1 */
 	GATE("DMA", "APBDMA", 0x308, 0x30c, 0x328, 0x32c, 2), /* APBDMA of Jetson TK1 */
+	GATE("SPI1", "SPI",   0x308, 0x30c, 0x328, 0x32c, 9), /* SPI1 of Jetson TK1 */
 };
 #define JAILHOUSE_NR_CLOCKS ARRAY_SIZE(gates)
 
