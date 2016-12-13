@@ -197,8 +197,8 @@ static int set_rate(struct clk_hw *hw, unsigned long rate,
 	pr_debug("JH: set_rate: ID = %d, rate = %lu\n", gate->id, rate);
 
 	if (gate->id == 1) {
-		pr_debug(" JH: SPI Sonderbehandlung\n");
-		writel_relaxed(0xff, gate->base + 0x134);
+		pr_alert(" JH: SPI Sonderbehandlung\n");
+		writel_relaxed(0x49, gate->base + 0x134); /* zwingt auf 11MhZ */
 		return 0;
 	}
 
