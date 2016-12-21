@@ -796,7 +796,8 @@ static int tegra_spi_setup(struct spi_device *spi)
 		val &= ~SPI_CS_POL_INACTIVE(spi->chip_select);
 	else
 		val |= SPI_CS_POL_INACTIVE(spi->chip_select);
-	tegra_spi_gpio_set_cs(spi, false);
+	if (gpio_is_valid(spi->cs_gpio))
+		tegra_spi_gpio_set_cs(spi, false);
 	tspi->def_command1_reg = val;
 	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
 	spin_unlock_irqrestore(&tspi->lock, flags);
