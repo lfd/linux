@@ -193,12 +193,27 @@ static int set_rate(struct clk_hw *hw, unsigned long rate,
 		     unsigned long parent_rate)
 {
 	struct jailhouse_clk_gate *gate = to_jailhouse_clk_gate(hw);
+	u32 val = 0;
 
 	pr_debug("JH: set_rate: ID = %d, rate = %lu\n", gate->id, rate);
 
-	if (gate->id == 1) {
-		pr_alert(" JH: SPI Sonderbehandlung\n");
-		writel_relaxed(0x49, gate->base + 0x134); /* zwingt auf 11MhZ */
+	if (gate->id == 3) {
+		switch (rate) {
+			case 11000000:
+				val = 0x49;
+				break;
+			case 10000000:
+				val = 0x50;
+				break;
+			case  5000000:
+				val = 0xa2;
+				break;
+			case  1000000:
+				val = 0xff;
+				break;
+		}
+		if (val)
+			writel_relaxed(val, gate->base + 0x134);
 		return 0;
 	}
 
