@@ -325,6 +325,7 @@ int vmap_page_range(unsigned long addr, unsigned long end,
 					       ioremap_max_page_shift);
 	return err;
 }
+EXPORT_SYMBOL_GPL(ioremap_page_range);
 
 int ioremap_page_range(unsigned long addr, unsigned long end,
 		phys_addr_t phys_addr, pgprot_t prot)
