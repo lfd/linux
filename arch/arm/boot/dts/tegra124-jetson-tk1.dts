@@ -1641,6 +1641,16 @@
 		};
 	};
 
+	led-stripe {
+		compatible = "ws2801";
+		clk-gpios = <&gpio TEGRA_GPIO(H, 2) GPIO_ACTIVE_HIGH>;
+		data-gpios = <&gpio TEGRA_GPIO(H, 1) GPIO_ACTIVE_HIGH>;
+		refresh-rate = <5000>;
+		num-leds = <10>;
+		target-5v-supply = <&vdd_5v0_sata>;
+		status = "okay";
+	};
+
 	/* Expansion TS_SPI_* */
 	spi@7000d400 {
 		status = "okay";
