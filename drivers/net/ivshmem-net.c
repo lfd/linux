@@ -370,7 +370,7 @@ static void ivshm_net_tx_clean(struct net_device *ndev)
 
 		data = ivshm_net_desc_data(in, &in->tx, desc, &len);
 		if (!data) {
-			netdev_err(ndev, "bad tx descriptor\n");
+			netdev_err(ndev, "bad tx descriptor, data == NULL\n");
 			break;
 		}
 
