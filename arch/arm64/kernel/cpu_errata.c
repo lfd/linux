@@ -161,6 +161,7 @@ static void  install_bp_hardening_cb(const struct arm64_cpu_capabilities *entry,
 	if (cpuid_feature_extract_unsigned_field(pfr0, ID_AA64PFR0_CSV2_SHIFT))
 		return;
 
+	pr_err("SPECTRE: really installing bp hardening\n");
 	__install_bp_hardening_cb(fn, hyp_vecs_start, hyp_vecs_end);
 }
 
@@ -198,6 +199,8 @@ enable_smccc_arch_workaround_1(const struct arm64_cpu_capabilities *entry)
 	struct arm_smccc_res res;
 	u32 midr = read_cpuid_id();
 
+	pr_err("SPECTRE: enable_smccc_arch_workaround_1\n");
+
 	if (!entry->matches(entry, SCOPE_LOCAL_CPU))
 		return;
 
@@ -206,6 +209,7 @@ enable_smccc_arch_workaround_1(const struct arm64_cpu_capabilities *entry)
 
 	switch (psci_ops.conduit) {
 	case PSCI_CONDUIT_HVC:
+		pr_err("SPECTRE: via CONDUIT_HVC\n");
 		arm_smccc_1_1_hvc(ARM_SMCCC_ARCH_FEATURES_FUNC_ID,
 				  ARM_SMCCC_ARCH_WORKAROUND_1, &res);
 		if ((int)res.a0 < 0)
@@ -217,6 +221,7 @@ enable_smccc_arch_workaround_1(const struct arm64_cpu_capabilities *entry)
 		break;
 
 	case PSCI_CONDUIT_SMC:
+		pr_err("SPECTRE: via CONDUIT_SMC\n");
 		arm_smccc_1_1_smc(ARM_SMCCC_ARCH_FEATURES_FUNC_ID,
 				  ARM_SMCCC_ARCH_WORKAROUND_1, &res);
 		if ((int)res.a0 < 0)
@@ -335,6 +340,8 @@ static bool has_ssbd_mitigation(const struct arm64_cpu_capabilities *entry,
 	bool required = true;
 	s32 val;
 
+	pr_err("SPECTRE: has_ssbd_mitigation\n");
+
 	WARN_ON(scope != SCOPE_LOCAL_CPU || preemptible());
 
 	if (psci_ops.smccc_version == SMCCC_VERSION_1_0) {
@@ -344,11 +351,13 @@ static bool has_ssbd_mitigation(const struct arm64_cpu_capabilities *entry,
 
 	switch (psci_ops.conduit) {
 	case PSCI_CONDUIT_HVC:
+		printk("SPECTRE: CONDUIT_HVC\n");
 		arm_smccc_1_1_hvc(ARM_SMCCC_ARCH_FEATURES_FUNC_ID,
 				  ARM_SMCCC_ARCH_WORKAROUND_2, &res);
 		break;
 
 	case PSCI_CONDUIT_SMC:
+		printk("SPECTRE: CONDUIT_SMC\n");
 		arm_smccc_1_1_smc(ARM_SMCCC_ARCH_FEATURES_FUNC_ID,
 				  ARM_SMCCC_ARCH_WORKAROUND_2, &res);
 		break;
@@ -391,6 +400,7 @@ static bool has_ssbd_mitigation(const struct arm64_cpu_capabilities *entry,
 		break;
 
 	case ARM64_SSBD_KERNEL:
+		pr_err("SPECTRE: ARM64_SSBD_KERNEL\n");
 		if (required) {
 			__this_cpu_write(arm64_ssbd_callback_required, 1);
 			arm64_set_ssbd_mitigation(true);
@@ -408,6 +418,7 @@ static bool has_ssbd_mitigation(const struct arm64_cpu_capabilities *entry,
 		break;
 	}
 
+	printk("SPECTRE: required: %u\n", required);
 	return required;
 }
 #endif	/* CONFIG_ARM64_SSBD */
