@@ -176,4 +176,11 @@ config UIO_PCI_GENERIC_SVA
 	  This driver binds to PCI devices and exposes them to userspace
 	  via the UIO framework.
 
+config UIO_IVSHMEM
+	tristate "Inter-VM Shared Memory driver"
+	depends on PCI
+	help
+	  Userspace I/O driver for the inter-VM shared memory PCI device
+	  as provided by QEMU and the Jailhouse hypervisor.
+
 endif
