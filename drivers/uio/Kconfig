@@ -223,4 +223,10 @@ config UIO_NXP_HSE_MU
 comment "MU interface must be activated by HSE firmware before use"
 	depends on UIO_NXP_HSE && !UIO_NXP_HSE_MU0
 
+config UIO_IVSHMEM
+	tristate "Inter-VM Shared Memory driver"
+	depends on PCI
+	help
+	  Userspace I/O driver for the inter-VM shared memory PCI device
+	  as provided by QEMU and the Jailhouse hypervisor.
 endif
