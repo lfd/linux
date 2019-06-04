@@ -861,6 +861,15 @@ static int uio_mmap(struct file *filep, struct vm_area_struct *vma)
 		goto out;
 	}
 
+	if (idev->info->mem[mi].readonly) {
+		if (vma->vm_flags & VM_WRITE) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		vma->vm_flags &= ~VM_MAYWRITE;
+	}
+
 	switch (idev->info->mem[mi].memtype) {
 	case UIO_MEM_IOVA:
 	case UIO_MEM_PHYS:
