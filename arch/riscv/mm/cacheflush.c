@@ -88,6 +88,11 @@ void flush_icache_pte(struct mm_struct *mm, pte_t pte)
 {
 	struct folio *folio = page_folio(pte_page(pte));
 
+	if (!pfn_valid(pte_pfn(pte))) {
+		flush_icache_all();
+		return;
+	}
+
 	if (!test_bit(PG_dcache_clean, &folio->flags)) {
 		flush_icache_mm(mm, false);
 		set_bit(PG_dcache_clean, &folio->flags);
