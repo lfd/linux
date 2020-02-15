@@ -85,7 +85,8 @@ void flush_icache_pte(pte_t pte)
 {
 	struct page *page = pte_page(pte);
 
-	if (!test_and_set_bit(PG_dcache_clean, &page->flags))
+	if (!pfn_valid(pte_pfn(pte)) ||
+	    !test_and_set_bit(PG_dcache_clean, &page->flags))
 		flush_icache_all();
 }
 #endif /* CONFIG_MMU */
