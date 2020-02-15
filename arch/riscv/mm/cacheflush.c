@@ -91,6 +91,11 @@ void flush_icache_pte(pte_t pte)
 	if (PageHuge(page))
 		page = compound_head(page);
 
+	if (!pfn_valid(pte_pfn(pte))) {
+		flush_icache_all();
+		return;
+	}
+
 	if (!test_bit(PG_dcache_clean, &page->flags)) {
 		flush_icache_all();
 		set_bit(PG_dcache_clean, &page->flags);
