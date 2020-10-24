@@ -5,7 +5,6 @@
 #include <asm/io.h>
 
 #define UART_NR		8
-static int grlib_apbuart_port_nr;
 
 struct grlib_apbuart_regs_map {
 	u32 data;
