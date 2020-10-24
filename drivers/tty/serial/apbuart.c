@@ -339,7 +339,7 @@ static const struct uart_ops grlib_apbuart_ops = {
 };
 
 static struct uart_port grlib_apbuart_ports[UART_NR];
-static struct device_node *grlib_apbuart_nodes[UART_NR];
+static int grlib_apbuart_port_nr;
 
 static int apbuart_scan_fifo_size(struct uart_port *port, int portnumber)
 {
@@ -489,6 +489,9 @@ static int __init apbuart_console_setup(struct console *co, char *options)
 
 	port = &grlib_apbuart_ports[co->index];
 
+	if (!port->membase)
+		return -ENODEV;
+
 	spin_lock_init(&port->lock);
 
 	if (options)
@@ -511,13 +514,8 @@ static struct console grlib_apbuart_console = {
 	.data = &grlib_apbuart_driver,
 };
 
-
-static int grlib_apbuart_configure(void);
-
 static int __init apbuart_console_init(void)
 {
-	if (grlib_apbuart_configure())
-		return -ENODEV;
 	register_console(&grlib_apbuart_console);
 	return 0;
 }
@@ -546,17 +544,41 @@ static struct uart_driver grlib_apbuart_driver = {
 
 static int apbuart_probe(struct platform_device *op)
 {
-	int i;
 	struct uart_port *port = NULL;
+	const int *ampopts;
+	const u32 *freq_hz;
+	const struct amba_prom_registers *regs;
+	unsigned long addr;
+	int line;
+	struct device_node *np = op->dev.of_node;
 
-	for (i = 0; i < grlib_apbuart_port_nr; i++) {
-		if (op->dev.of_node == grlib_apbuart_nodes[i])
-			break;
-	}
+	ampopts = of_get_property(np, "ampopts", NULL);
+	if (ampopts && (*ampopts == 0))
+		return -ENODEV; /* Ignore if used by another OS instance */
+	regs = of_get_property(np, "reg", NULL);
+	/* Frequency of APB Bus is frequency of UART */
+	freq_hz = of_get_property(np, "freq", NULL);
 
-	port = &grlib_apbuart_ports[i];
-	port->dev = &op->dev;
+	if (!regs || !freq_hz || (*freq_hz == 0))
+		return -ENODEV;
+
+	addr = regs->phys_addr;
+
+	line = grlib_apbuart_port_nr++;
+
+	port = &grlib_apbuart_ports[line];
+
+	port->mapbase = addr;
+	port->membase = ioremap(addr, sizeof(struct grlib_apbuart_regs_map));
 	port->irq = op->archdata.irqs[0];
+	port->iotype = UPIO_MEM;
+	port->ops = &grlib_apbuart_ops;
+	port->has_sysrq = IS_ENABLED(CONFIG_SERIAL_GRLIB_GAISLER_APBUART_CONSOLE);
+	port->flags = UPF_BOOT_AUTOCONF;
+	port->line = line;
+	port->uartclk = *freq_hz;
+	port->fifosize = apbuart_scan_fifo_size((struct uart_port *) port, line);
+	port->dev = &op->dev;
 
 	uart_add_one_port(&grlib_apbuart_driver, (struct uart_port *) port);
 
@@ -586,64 +608,9 @@ static struct platform_driver grlib_apbuart_of_driver = {
 	},
 };
 
-
-static int __init grlib_apbuart_configure(void)
-{
-	struct device_node *np;
-	int line = 0;
-
-	for_each_matching_node(np, apbuart_match) {
-		const int *ampopts;
-		const u32 *freq_hz;
-		const struct amba_prom_registers *regs;
-		struct uart_port *port;
-		unsigned long addr;
-
-		ampopts = of_get_property(np, "ampopts", NULL);
-		if (ampopts && (*ampopts == 0))
-			continue; /* Ignore if used by another OS instance */
-		regs = of_get_property(np, "reg", NULL);
-		/* Frequency of APB Bus is frequency of UART */
-		freq_hz = of_get_property(np, "freq", NULL);
-
-		if (!regs || !freq_hz || (*freq_hz == 0))
-			continue;
-
-		grlib_apbuart_nodes[line] = np;
-
-		addr = regs->phys_addr;
-
-		port = &grlib_apbuart_ports[line];
-
-		port->mapbase = addr;
-		port->membase = ioremap(addr, sizeof(struct grlib_apbuart_regs_map));
-		port->irq = 0;
-		port->iotype = UPIO_MEM;
-		port->ops = &grlib_apbuart_ops;
-		port->has_sysrq = IS_ENABLED(CONFIG_SERIAL_GRLIB_GAISLER_APBUART_CONSOLE);
-		port->flags = UPF_BOOT_AUTOCONF;
-		port->line = line;
-		port->uartclk = *freq_hz;
-		port->fifosize = apbuart_scan_fifo_size((struct uart_port *) port, line);
-		line++;
-
-		/* We support maximum UART_NR uarts ... */
-		if (line == UART_NR)
-			break;
-	}
-
-	grlib_apbuart_driver.nr = grlib_apbuart_port_nr = line;
-	return line ? 0 : -ENODEV;
-}
-
 static int __init grlib_apbuart_init(void)
 {
 	int ret;
-
-	/* Find all APBUARTS in device the tree and initialize their ports */
-	ret = grlib_apbuart_configure();
-	if (ret)
-		return ret;
 
 	printk(KERN_INFO "Serial: GRLIB APBUART driver\n");
 
