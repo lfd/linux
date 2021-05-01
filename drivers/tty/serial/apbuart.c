@@ -340,7 +340,7 @@ static const struct uart_ops grlib_apbuart_ops = {
 };
 
 static struct uart_port grlib_apbuart_ports[UART_NR];
-static int grlib_apbuart_port_nr;
+static DECLARE_BITMAP(apbuart_ports_in_use, UART_NR);
 
 static int apbuart_scan_fifo_size(struct uart_port *port, int portnumber)
 {
@@ -485,7 +485,7 @@ static int __init apbuart_console_setup(struct console *co, char *options)
 	 * if so, search for the first available port that does have
 	 * console support.
 	 */
-	if (co->index >= grlib_apbuart_port_nr)
+	if (co->index >= UART_NR)
 		co->index = 0;
 
 	port = &grlib_apbuart_ports[co->index];
@@ -584,7 +584,15 @@ static int apbuart_probe(struct platform_device *op)
 	if (!freq_hz)
 		return -ENODEV;
 
-	line = grlib_apbuart_port_nr++;
+	line = of_alias_get_id(np, "serial");
+	if (line < 0)
+		line = find_first_zero_bit(apbuart_ports_in_use, UART_NR);
+
+	if (line >= UART_NR)
+		return -ENODEV;
+
+	if (test_and_set_bit(line, apbuart_ports_in_use))
+		return -EBUSY;
 
 	port = &grlib_apbuart_ports[line];
 
@@ -660,9 +668,12 @@ static void __exit grlib_apbuart_exit(void)
 {
 	int i;
 
-	for (i = 0; i < grlib_apbuart_port_nr; i++)
-		uart_remove_one_port(&grlib_apbuart_driver,
-				     &grlib_apbuart_ports[i]);
+	for (i = 0; i < UART_NR; i++)
+		if (test_bit(i, apbuart_ports_in_use))
+			uart_remove_one_port(&grlib_apbuart_driver,
+					     &grlib_apbuart_ports[i]);
+
+	bitmap_zero(apbuart_ports_in_use, UART_NR);
 
 	uart_unregister_driver(&grlib_apbuart_driver);
 	platform_driver_unregister(&grlib_apbuart_of_driver);
