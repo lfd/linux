@@ -13,11 +13,6 @@ struct grlib_apbuart_regs_map {
 	u32 scaler;
 };
 
-struct amba_prom_registers {
-	unsigned int phys_addr;
-	unsigned int reg_size;
-};
-
 /*
  *  The following defines the bits in the APBUART Status Registers.
  */
