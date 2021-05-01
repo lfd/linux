@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/io.h>
 #include <linux/serial_core.h>
+#include <linux/clk.h>
 #include <asm/irq.h>
 
 #include "apbuart.h"
@@ -546,37 +547,56 @@ static int apbuart_probe(struct platform_device *op)
 {
 	struct uart_port *port = NULL;
 	const int *ampopts;
-	const u32 *freq_hz;
-	const struct amba_prom_registers *regs;
-	unsigned long addr;
+	struct clk *clk;
+	u32 freq_hz = 0;
+	struct resource *mem;
+	void __iomem *base;
 	int line;
+	int irq;
 	struct device_node *np = op->dev.of_node;
 
 	ampopts = of_get_property(np, "ampopts", NULL);
 	if (ampopts && (*ampopts == 0))
 		return -ENODEV; /* Ignore if used by another OS instance */
-	regs = of_get_property(np, "reg", NULL);
-	/* Frequency of APB Bus is frequency of UART */
-	freq_hz = of_get_property(np, "freq", NULL);
 
-	if (!regs || !freq_hz || (*freq_hz == 0))
+	irq = platform_get_irq(op, 0);
+	if (irq < 0)
+		return -EPROBE_DEFER;
+
+	mem = platform_get_resource(op, IORESOURCE_MEM, 0);
+	base = devm_ioremap_resource(&op->dev, mem);
+	if (IS_ERR(base)) {
+		dev_err(&op->dev, "could not acquire device memory\n");
+		return PTR_ERR(base);
+	}
+
+	of_property_read_u32(np, "freq", &freq_hz);
+
+	if (!freq_hz) {
+		clk = devm_clk_get(&op->dev, NULL);
+		if (IS_ERR(clk)) {
+			dev_err(&op->dev, "unable to find controller clock\n");
+			return PTR_ERR(clk);
+		}
+		freq_hz = clk_get_rate(clk);
+	}
+
+	if (!freq_hz)
 		return -ENODEV;
-
-	addr = regs->phys_addr;
 
 	line = grlib_apbuart_port_nr++;
 
 	port = &grlib_apbuart_ports[line];
 
-	port->mapbase = addr;
-	port->membase = ioremap(addr, sizeof(struct grlib_apbuart_regs_map));
-	port->irq = op->archdata.irqs[0];
+	port->mapbase = mem->start;
+	port->membase = base;
+	port->irq = irq;
 	port->iotype = UPIO_MEM;
 	port->ops = &grlib_apbuart_ops;
 	port->has_sysrq = IS_ENABLED(CONFIG_SERIAL_GRLIB_GAISLER_APBUART_CONSOLE);
 	port->flags = UPF_BOOT_AUTOCONF;
 	port->line = line;
-	port->uartclk = *freq_hz;
+	port->uartclk = freq_hz;
 	port->fifosize = apbuart_scan_fifo_size((struct uart_port *) port, line);
 	port->dev = &op->dev;
 
@@ -595,6 +615,9 @@ static const struct of_device_id apbuart_match[] = {
 	 },
 	{
 	 .name = "01_00c",
+	 },
+	{
+	 .compatible = "gaisler,apbuart",
 	 },
 	{},
 };
@@ -615,7 +638,6 @@ static int __init grlib_apbuart_init(void)
 	printk(KERN_INFO "Serial: GRLIB APBUART driver\n");
 
 	ret = uart_register_driver(&grlib_apbuart_driver);
-
 	if (ret) {
 		printk(KERN_ERR "%s: uart_register_driver failed (%i)\n",
 		       __FILE__, ret);
