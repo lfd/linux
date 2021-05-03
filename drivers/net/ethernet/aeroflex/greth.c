@@ -78,8 +78,8 @@ static int greth_close(struct net_device *dev);
 static int greth_set_mac_add(struct net_device *dev, void *p);
 static void greth_set_multicast_list(struct net_device *dev);
 
-#define GRETH_REGLOAD(a)	    (be32_to_cpu(__raw_readl(&(a))))
-#define GRETH_REGSAVE(a, v)         (__raw_writel(cpu_to_be32(v), &(a)))
+#define GRETH_REGLOAD(a)	    (__raw_readl(&(a)))
+#define GRETH_REGSAVE(a, v)         (__raw_writel(v, &(a)))
 #define GRETH_REGORIN(a, v)         (GRETH_REGSAVE(a, (GRETH_REGLOAD(a) | (v))))
 #define GRETH_REGANDIN(a, v)        (GRETH_REGSAVE(a, (GRETH_REGLOAD(a) & (v))))
 
@@ -154,12 +154,12 @@ static inline void greth_disable_irqs(struct greth_private *greth)
 
 static inline void greth_write_bd(u32 *bd, u32 val)
 {
-	__raw_writel(cpu_to_be32(val), bd);
+	__raw_writel(val, bd);
 }
 
 static inline u32 greth_read_bd(u32 *bd)
 {
-	return be32_to_cpu(__raw_readl(bd));
+	return __raw_readl(bd);
 }
 
 static void greth_clean_rings(struct greth_private *greth)
@@ -1342,6 +1342,7 @@ static int greth_of_probe(struct platform_device *ofdev)
 	struct net_device *dev;
 	struct greth_private *greth;
 	struct greth_regs *regs;
+	struct resource *res;
 
 	int i;
 	int err;
@@ -1365,19 +1366,15 @@ static int greth_of_probe(struct platform_device *ofdev)
 
 	spin_lock_init(&greth->devlock);
 
-	greth->regs = of_ioremap(&ofdev->resource[0], 0,
-				 resource_size(&ofdev->resource[0]),
-				 "grlib-greth regs");
-
-	if (greth->regs == NULL) {
-		if (netif_msg_probe(greth))
-			dev_err(greth->dev, "ioremap failure.\n");
-		err = -EIO;
+	res = platform_get_resource(ofdev, IORESOURCE_MEM, 0);
+	greth->regs = devm_ioremap_resource(&ofdev->dev, res);
+	if (IS_ERR(greth->regs)) {
+		err = PTR_ERR(greth->regs);
 		goto error1;
 	}
 
 	regs = greth->regs;
-	greth->irq = ofdev->archdata.irqs[0];
+	greth->irq = platform_get_irq(ofdev, 0);
 
 	dev_set_drvdata(greth->dev, dev);
 	SET_NETDEV_DEV(dev, greth->dev);
@@ -1395,7 +1392,7 @@ static int greth_of_probe(struct platform_device *ofdev)
 			err = -EIO;
 			if (netif_msg_probe(greth))
 				dev_err(greth->dev, "timeout when waiting for reset.\n");
-			goto error2;
+			goto error1;
 		}
 	}
 
@@ -1423,7 +1420,7 @@ static int greth_of_probe(struct platform_device *ofdev)
 	if (err) {
 		if (netif_msg_probe(greth))
 			dev_err(greth->dev, "failed to register MDIO bus\n");
-		goto error2;
+		goto error1;
 	}
 
 	/* Allocate TX descriptor ring in coherent memory */
@@ -1517,8 +1514,6 @@ error4:
 	dma_free_coherent(greth->dev, 1024, greth->tx_bd_base, greth->tx_bd_base_phys);
 error3:
 	mdiobus_unregister(greth->mdio);
-error2:
-	of_iounmap(&ofdev->resource[0], greth->regs, resource_size(&ofdev->resource[0]));
 error1:
 	free_netdev(dev);
 	return err;
@@ -1540,8 +1535,6 @@ static int greth_of_remove(struct platform_device *of_dev)
 
 	unregister_netdev(ndev);
 
-	of_iounmap(&of_dev->resource[0], greth->regs, resource_size(&of_dev->resource[0]));
-
 	free_netdev(ndev);
 
 	return 0;
@@ -1553,6 +1546,9 @@ static const struct of_device_id greth_of_match[] = {
 	 },
 	{
 	 .name = "01_01d",
+	 },
+	{
+	 .compatible = "gaisler,greth",
 	 },
 	{},
 };
