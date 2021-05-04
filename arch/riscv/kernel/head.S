@@ -103,6 +103,7 @@ relocate_enable_mmu:
 	or a0, a0, a1
 	sfence.vma
 	csrw CSR_SATP, a0
+	sfence.vma
 .align 2
 1:
 	/* Set trap vector to spin forever to help debug */
