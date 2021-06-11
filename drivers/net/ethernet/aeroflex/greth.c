@@ -754,7 +754,16 @@ static int greth_rx(struct net_device *dev, int limit)
 		status = greth_read_bd(&bdp->stat);
 
 		if (unlikely(status & GRETH_BD_EN)) {
-			break;
+			/* SELENE prototype issue detection */
+			if ((status == (GRETH_BD_EN|GRETH_BD_IE)) ||
+			    ((greth->rx_cur == GRETH_RXBD_NUM_MASK) &&
+			    (status == (GRETH_BD_EN|GRETH_BD_IE|GRETH_BD_WR))))
+				break;
+			/* if triggered warn about it and fake an error frame:
+			 *  "Frame too long", so it will be dropped.
+			 */
+			/*netdev_notice(dev, "RX-BUG detected 0x%08x\n", status);*/
+			status = GRETH_RXBD_ERR_FT;
 		}
 
 		dma_addr = greth_read_bd(&bdp->addr);
@@ -871,8 +880,18 @@ static int greth_rx_gbit(struct net_device *dev, int limit)
 		status = greth_read_bd(&bdp->stat);
 		bad = 0;
 
-		if (status & GRETH_BD_EN)
-			break;
+		if (status & GRETH_BD_EN) {
+			/* SELENE prototype issue detection */
+			if ((status == (GRETH_BD_EN|GRETH_BD_IE)) ||
+			    ((greth->rx_cur == GRETH_RXBD_NUM_MASK) &&
+			    (status == (GRETH_BD_EN|GRETH_BD_IE|GRETH_BD_WR))))
+				break;
+			/* if triggered warn about it and fake an error frame:
+			 *  "Frame too long", so it will be dropped.
+			 */
+			/*netdev_notice(dev, "RX-BUG detected 0x%08x\n", status);*/
+			status = GRETH_RXBD_ERR_FT;
+		}
 
 		/* Check status for errors. */
 		if (unlikely(status & GRETH_RXBD_STATUS)) {
