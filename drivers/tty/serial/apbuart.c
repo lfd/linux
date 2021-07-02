@@ -506,7 +506,7 @@ static int __init apbuart_console_setup(struct console *co, char *options)
 static struct uart_driver grlib_apbuart_driver;
 
 static struct console grlib_apbuart_console = {
-	.name = "ttyS",
+	.name = "ttyGR",
 	.write = apbuart_console_write,
 	.device = uart_console_device,
 	.setup = apbuart_console_setup,
@@ -530,10 +530,8 @@ console_initcall(apbuart_console_init);
 
 static struct uart_driver grlib_apbuart_driver = {
 	.owner = THIS_MODULE,
-	.driver_name = "serial",
-	.dev_name = "ttyS",
-	.major = SERIAL_APBUART_MAJOR,
-	.minor = SERIAL_APBUART_MINOR,
+	.driver_name = "gaisler-serial",
+	.dev_name = "ttyGR",
 	.nr = UART_NR,
 	.cons = APBUART_CONSOLE,
 };
