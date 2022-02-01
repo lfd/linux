@@ -3,7 +3,7 @@
 
 #ifdef CONFIG_HAVE_ARCH_HUGE_VMAP
 
-#define IOREMAP_MAX_ORDER (PUD_SHIFT)
+#define IOREMAP_MAX_ORDER (PMD_SHIFT)
 
 #define arch_vmap_pud_supported arch_vmap_pud_supported
 static inline bool arch_vmap_pud_supported(pgprot_t prot)
