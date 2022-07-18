@@ -83,6 +83,12 @@ properties:
       - rv64imac
       - rv64imafdc
 
+  riscv,timer-can-wake-cpu:
+    type: boolean
+    description:
+      If present, the timer interrupt can wake up the CPU from
+      suspend/idle state.
+
   # RISC-V requires 'timebase-frequency' in /cpus, so disallow it here
   timebase-frequency: false
 
