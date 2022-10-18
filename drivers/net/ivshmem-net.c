@@ -986,7 +986,7 @@ static int ivshm_net_probe(struct pci_dev *pdev,
 	ndev->features = ndev->hw_features;
 
 	netif_carrier_off(ndev);
-	netif_napi_add(ndev, &in->napi, ivshm_net_poll, NAPI_POLL_WEIGHT);
+	netif_napi_add(ndev, &in->napi, ivshm_net_poll);
 
 	ret = register_netdev(ndev);
 	if (ret)
