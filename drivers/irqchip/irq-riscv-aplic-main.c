@@ -205,7 +205,7 @@ static int aplic_probe(struct platform_device *pdev)
 	 * otherwise setup APLIC direct mode.
 	 */
 	if (fwnode_property_present(fwnode, "msi-parent"))
-		rc = -ENODEV;
+		rc = aplic_msi_setup(&pdev->dev, regs);
 	else
 		rc = aplic_direct_setup(&pdev->dev, regs);
 	if (rc) {

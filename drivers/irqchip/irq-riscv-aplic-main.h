@@ -48,5 +48,13 @@ static inline int aplic_direct_setup(struct device *dev, void __iomem *regs)
 	return -ENODEV;
 }
 #endif
+#ifdef CONFIG_RISCV_APLIC_MSI
+int aplic_msi_setup(struct device *dev, void __iomem *regs);
+#else
+static inline int aplic_msi_setup(struct device *dev, void __iomem *regs)
+{
+	return -ENODEV;
+}
+#endif
 
 #endif
