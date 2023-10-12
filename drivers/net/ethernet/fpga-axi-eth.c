@@ -192,6 +192,21 @@ static int axi_eth_mdio_read(struct mii_bus * bus, int addr, int regnum) {
     if (tx_chk != rx_chk) return -EIO;
     return rx & 0xffff;
 }
+// phy_mdio initialization from verilog ethernet example project
+static void mdio_init(struct mii_bus * bus){
+        (*(bus->write))(bus, 3, 0x0D, 0x001F);
+        (*(bus->write))(bus, 3, 0x0E, 0x0031);
+        (*(bus->write))(bus, 3, 0x0D, 0x401F);
+        (*(bus->write))(bus, 3, 0x0E, 0x0070);
+        (*(bus->write))(bus, 3, 0x0D, 0x001F);
+        (*(bus->write))(bus, 3, 0x0E, 0x00D3);
+        (*(bus->write))(bus, 3, 0x0D, 0x401F);
+        (*(bus->write))(bus, 3, 0x0E, 0x4000);
+        (*(bus->write))(bus, 3, 0x0D, 0x001F);
+        (*(bus->write))(bus, 3, 0x0E, 0x016F);
+        (*(bus->write))(bus, 3, 0x0D, 0x401F);
+        (*(bus->write))(bus, 3, 0x0E, 0x0015);
+}
 
 static int axi_eth_mdio_reset(struct mii_bus * bus) {
     struct axi_eth_priv * priv = bus->priv;
@@ -212,7 +227,7 @@ static int axi_eth_mdio_reset(struct mii_bus * bus) {
         udelay(MDIO_RESET_DELAY);
     }
     udelay(MDIO_RESET_DELAY);
-
+    mdio_init(bus);
     return 0;
 }
 
@@ -220,6 +235,9 @@ static void axi_eth_mdio_poll(struct net_device * net_dev) {
 }
 
 static int axi_eth_mdio_register(struct axi_eth_priv * priv) {
+// added reset for gig ethernet ip when writing to mdio_rx
+// ip needs to be reset befor mdio 
+    priv->regs->mdio_rx = 1;
     struct mii_bus * mdio_bus = mdiobus_alloc();
     struct device_node * np = priv->pdev->dev.of_node;
     int err = 0;
@@ -234,7 +252,6 @@ static int axi_eth_mdio_register(struct axi_eth_priv * priv) {
     mdio_bus->read = axi_eth_mdio_read;
     mdio_bus->write = axi_eth_mdio_write;
     mdio_bus->reset = axi_eth_mdio_reset;
-
     if (np != NULL) {
         struct device_node * child;
         unsigned phy_cnt = 0;
@@ -559,12 +576,11 @@ static int axi_eth_dev_init(struct net_device * net_dev) {
     struct axi_eth_priv * priv = netdev_priv(net_dev);
     int err = 0;
 
-    spin_lock_irq(&priv->lock);
 
     priv->regs->int_enable = priv->int_enable = 0;
     err = request_irq(priv->irq, axi_eth_isr, IRQF_TRIGGER_HIGH, DRIVER_NAME, net_dev);
     if (err) return err;
-
+    spin_lock_irq(&priv->lock);
     priv->rx_inp = priv->regs->rx_inp;
     priv->rx_out = priv->regs->rx_out;
     priv->tx_inp = priv->regs->tx_inp;
@@ -756,15 +772,12 @@ static int axi_eth_probe(struct platform_device * pdev) {
             goto out;
         }
     }
-
     err = register_netdev(net_dev);
     if (err) {
         printk(KERN_ERR "AXI-ETH: Can't register net device\n");
         goto out;
     }
-
     return 0;
-
 out:
     if (priv->mdio_bus != NULL) {
         mdiobus_unregister(priv->mdio_bus);
