@@ -9,6 +9,7 @@
 #include <linux/of_device.h>
 #include <linux/of_mdio.h>
 #include <linux/of_net.h>
+#include <linux/platform_device.h>
 #include <linux/phy.h>
 
 /*
@@ -551,7 +552,7 @@ static int axi_eth_ioctl(struct net_device * net_dev, struct ifreq * ifr, int cm
 }
 
 static void axi_eth_get_drvinfo(struct net_device * dev, struct ethtool_drvinfo * info) {
-    strlcpy(info->driver, DRIVER_NAME, sizeof(info->driver));
+    strscpy(info->driver, DRIVER_NAME, sizeof(info->driver));
 }
 
 static u32 axi_eth_get_msglevel(struct net_device * dev) {
