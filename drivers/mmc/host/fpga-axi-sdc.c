@@ -411,6 +411,7 @@ static int axi_sdc_probe(struct platform_device * pdev) {
     host->pdev = pdev;
     host->regs = (struct sdc_regs __iomem *)ioaddr;
     host->irq = irq;
+    spin_lock_init(&host->lock);
 
     ret = of_property_read_u32(dev->of_node, "clock", &host->clk_freq);
     if (ret) host->clk_freq = 100000000;
