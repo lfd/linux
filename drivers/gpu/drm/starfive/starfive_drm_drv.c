@@ -13,7 +13,7 @@
 #include <drm/drm_atomic.h>
 #include <drm/drm_atomic_helper.h>
 #include <drm/drm_drv.h>
-#include <drm/drm_fbdev_generic.h>
+#include <drm/drm_fbdev_ttm.h>
 #include <drm/drm_fourcc.h>
 #include <drm/drm_gem.h>
 #include <drm/drm_gem_dma_helper.h>
@@ -168,7 +168,7 @@ static int starfive_drm_bind(struct device *dev)
 	if (ret)
 		goto err_cleanup;
 #ifdef CONFIG_FRAMEBUFFER_CONSOLE
-	drm_fbdev_generic_setup(drm_dev, 16);
+	drm_fbdev_ttm_setup(drm_dev, 16);
 #endif
 	return 0;
 
@@ -213,10 +213,9 @@ static int starfive_drm_probe(struct platform_device *pdev)
 	return component_master_add_with_match(dev, &starfive_drm_ops, match);
 }
 
-static int starfive_drm_remove(struct platform_device *pdev)
+static void starfive_drm_remove(struct platform_device *pdev)
 {
 	component_master_del(&pdev->dev, &starfive_drm_ops);
-	return 0;
 }
 
 static const struct of_device_id starfive_drm_dt_ids[] = {

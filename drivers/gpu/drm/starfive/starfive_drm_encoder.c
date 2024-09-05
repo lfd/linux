@@ -113,10 +113,9 @@ static int starfive_encoder_probe(struct platform_device *pdev)
 	return component_add(&pdev->dev, &starfive_encoder_component_ops);
 }
 
-static int starfive_encoder_remove(struct platform_device *pdev)
+static void starfive_encoder_remove(struct platform_device *pdev)
 {
 	component_del(&pdev->dev, &starfive_encoder_component_ops);
-	return 0;
 }
 
 struct platform_driver starfive_encoder_driver = {
