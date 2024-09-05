@@ -7,8 +7,8 @@
 #include <linux/uaccess.h>
 #include <linux/time_namespace.h>
 
-/* ordentlich hochschrauben, wenn gebraucht */
-#define MAX_EVENTS 30000
+static unsigned int max_events = 300000;
+module_param(max_events,uint,0440);
 
 /* wayne */
 #define MAX_INPUT_SIZE 31
@@ -71,7 +71,7 @@ void ttp_emit(unsigned int id)
 	}
 
 	stor = storage + cpu_id;
-	if (stor->eventcount >= MAX_EVENTS) {
+	if (stor->eventcount >= max_events) {
 		printk("ttp: FATAL - Max Events reached\n");
 		return;
 	}
@@ -239,16 +239,18 @@ static int __init ttp_init(void)
 	int err;
 
 	ttp_cpus = cpumask_weight(cpu_present_mask);
-	printk("ttp: allocating space for %u CPUs\n", ttp_cpus);
+	printk("ttp: allocating space for %u events on %u CPUs\n", max_events, ttp_cpus);
 	storage = kzalloc(ttp_cpus * sizeof(*storage), GFP_KERNEL);
 	if (!storage)
 		return -ENOMEM;
 
 	for (i = 0; i < ttp_cpus; i++) {
 		stor = storage + i;
-		stor->events = kzalloc(MAX_EVENTS * sizeof(*storage->events), GFP_KERNEL);
-		if (!stor->events)
+		stor->events = kvzalloc(max_events * sizeof(*stor->events), GFP_KERNEL);
+		if (!stor->events) {
+			printk("no mem for %zu on CPU=%u\n",max_events * sizeof(*stor->events), i);
 			return -ENOMEM; // fixme - misses unrolling
+		}
 	}
 
 	err = misc_register(&ttp_misc_dev);
