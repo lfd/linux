@@ -35,6 +35,8 @@ static struct ttp_storage *storage;
 /* clock selector */
 static clockid_t ttp_clock;
 
+static unsigned char suppress_error = 0;
+
 /* emit a timed trace point */
 void ttp_emit(unsigned int id)
 {
@@ -72,7 +74,8 @@ void ttp_emit(unsigned int id)
 
 	stor = storage + cpu_id;
 	if (stor->eventcount >= max_events) {
-		pr_err("Max Events reached\n");
+		if (suppress_error++ == 0)
+			pr_err("Max Events reached\n");
 		return;
 	}
 
