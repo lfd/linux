@@ -35,6 +35,8 @@
 #include <linux/rcupdate_trace.h>
 #include <linux/memcontrol.h>
 #include <linux/trace_events.h>
+#include <linux/ttp.h>
+
 
 #include <net/netfilter/nf_bpf_link.h>
 #include <net/netkit.h>
@@ -5814,6 +5816,7 @@ static int __sys_bpf(int cmd, bpfptr_t uattr, unsigned int size)
 
 SYSCALL_DEFINE3(bpf, int, cmd, union bpf_attr __user *, uattr, unsigned int, size)
 {
+	ttp_emit(999);
 	return __sys_bpf(cmd, USER_BPFPTR(uattr), size);
 }
 
