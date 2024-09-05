@@ -141,7 +141,7 @@ again:
 
 	stor = storage + fpos->cpu;
 	ev = stor->events + fpos->event;
-	ret = snprintf(tmp, sizeof(tmp), "%u; %u; %llu\n", ev->id, fpos->cpu, ev->abstime);
+	ret = snprintf(tmp, sizeof(tmp), "%u,%u,%llu\n", ev->id, fpos->cpu, ev->abstime);
 	if (copy_to_user(out, tmp, ret))
 			ret = -EINVAL;
 
