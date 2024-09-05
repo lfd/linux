@@ -28,6 +28,7 @@
 #include <asm/cpufeature.h>
 #include <asm/sbi.h>
 #include <asm/timex.h>
+#include <linux/ttp.h>
 
 static DEFINE_STATIC_KEY_FALSE(riscv_sstc_available);
 static bool riscv_timer_cannot_wake_cpu;
@@ -143,7 +144,9 @@ static irqreturn_t riscv_timer_interrupt(int irq, void *dev_id)
 	struct clock_event_device *evdev = this_cpu_ptr(&riscv_clock_event);
 
 	riscv_clock_event_stop();
+	ttp_emit(2);
 	evdev->event_handler(evdev);
+	ttp_emit(3);
 
 	return IRQ_HANDLED;
 }

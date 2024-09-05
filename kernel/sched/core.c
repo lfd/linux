@@ -66,6 +66,7 @@
 #include <linux/vtime.h>
 #include <linux/wait_api.h>
 #include <linux/workqueue_api.h>
+#include <linux/ttp.h>
 
 #ifdef CONFIG_PREEMPT_DYNAMIC
 # ifdef CONFIG_GENERIC_ENTRY
@@ -3575,6 +3576,7 @@ ttwu_stat(struct task_struct *p, int cpu, int wake_flags)
 static inline void ttwu_do_wakeup(struct task_struct *p)
 {
 	WRITE_ONCE(p->__state, TASK_RUNNING);
+	ttp_emit(4);
 	trace_sched_wakeup(p);
 }
 
@@ -4057,6 +4059,7 @@ int try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 		if (!ttwu_state_match(p, state, &success))
 			goto out;
 
+		ttp_emit(5);
 		trace_sched_waking(p);
 		ttwu_do_wakeup(p);
 		goto out;
@@ -4073,6 +4076,7 @@ int try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 		if (!ttwu_state_match(p, state, &success))
 			break;
 
+		ttp_emit(6);
 		trace_sched_waking(p);
 
 		/*
@@ -6543,6 +6547,7 @@ static void __sched notrace __schedule(unsigned int sched_mode)
 		psi_account_irqtime(rq, prev, next);
 		psi_sched_switch(prev, next, !task_on_rq_queued(prev));
 
+		ttp_emit(1);
 		trace_sched_switch(sched_mode & SM_MASK_PREEMPT, prev, next, prev_state);
 
 		/* Also unlocks the rq: */
