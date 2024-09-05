@@ -57,7 +57,7 @@ void ttp_emit(unsigned int id)
 			break;
 
 		default:
-			printk("tpp: FATAL: unknown clock\n");
+			pr_err("tpp: FATAL: unknown clock\n");
 			return;
 	}
 
@@ -66,13 +66,13 @@ void ttp_emit(unsigned int id)
 	cpu_id = smp_processor_id();
 
 	if (cpu_id >= ttp_cpus) {
-		printk("ttp: FATAL\n");
+		pr_crit("CPU id\n");
 		return;
 	}
 
 	stor = storage + cpu_id;
 	if (stor->eventcount >= max_events) {
-		printk("ttp: FATAL - Max Events reached\n");
+		pr_err("Max Events reached\n");
 		return;
 	}
 
@@ -177,10 +177,10 @@ ttp_write(struct file *file, const char __user *in, size_t len, loff_t *off)
 		}
 
 		ttp_enabled = true;
-		printk("ttp: Armed\n");
+		pr_info("ttp: Armed\n");
 	} else if (strncmp(input, "stop", len) == 0) {
 		ttp_enabled = false;
-		printk("ttp: Stopped\n");
+		pr_info("ttp: Stopped\n");
 	} else if (strncmp(input, "reset", len) == 0) {
 		if (ttp_enabled) {
 			ret = -EINVAL;
@@ -189,21 +189,21 @@ ttp_write(struct file *file, const char __user *in, size_t len, loff_t *off)
 
 		for (i = 0; i < ttp_cpus; i++)
 			storage[i].eventcount = 0;
-		printk("ttp: Reset event storage\n");
+		pr_info("ttp: Reset event storage\n");
 	} else if (strncmp(input, "0", len) == 0) {
 		if (ttp_enabled) {
 			ret = -EBUSY;
 			goto unlock_out;
 		}
 		ttp_clock = CLOCK_REALTIME;
-		printk("ttp: using CLOCK_REALTIME\n");
+		pr_info("ttp: using CLOCK_REALTIME\n");
 	} else if (strncmp(input, "1", len) == 0) {
 		if (ttp_enabled) {
 			ret = -EBUSY;
 			goto unlock_out;
 		}
 		ttp_clock = CLOCK_MONOTONIC;
-		printk("ttp: using CLOCK_MONOTONIC\n");
+		pr_info("ttp: using CLOCK_MONOTONIC\n");
 	} else {
 		ret = -EINVAL;
 		goto unlock_out;
@@ -239,7 +239,7 @@ static int __init ttp_init(void)
 	int err;
 
 	ttp_cpus = cpumask_weight(cpu_present_mask);
-	printk("ttp: allocating space for %u events on %u CPUs\n", max_events, ttp_cpus);
+	pr_notice("ttp: allocating space for %u events on %u CPUs\n", max_events, ttp_cpus);
 	storage = kzalloc(ttp_cpus * sizeof(*storage), GFP_KERNEL);
 	if (!storage)
 		return -ENOMEM;
@@ -248,7 +248,7 @@ static int __init ttp_init(void)
 		stor = storage + i;
 		stor->events = kvzalloc(max_events * sizeof(*stor->events), GFP_KERNEL);
 		if (!stor->events) {
-			printk("no mem for %zu on CPU=%u\n",max_events * sizeof(*stor->events), i);
+			pr_crit("no mem for %zu on CPU=%u\n",max_events * sizeof(*stor->events), i);
 			return -ENOMEM; // fixme - misses unrolling
 		}
 	}
