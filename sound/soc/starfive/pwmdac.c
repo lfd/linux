@@ -831,9 +831,8 @@ static int sf_pwmdac_probe(struct platform_device *pdev)
 }
 
 
-static int sf_pwmdac_remove(struct platform_device *pdev)
+static void sf_pwmdac_remove(struct platform_device *pdev)
 {
-	return 0;
 }
 
 #ifdef CONFIG_OF

@@ -336,9 +336,8 @@ static int sf_pdm_probe(struct platform_device *pdev)
 					&sf_pdm_dai_drv, 1);
 }
 
-static int sf_pdm_dev_remove(struct platform_device *pdev)
+static void sf_pdm_dev_remove(struct platform_device *pdev)
 {
-	return 0;
 }
 static const struct of_device_id sf_pdm_of_match[] = {
 	{.compatible = "starfive,sf-pdm",},
