@@ -192,6 +192,7 @@ ttp_write(struct file *file, const char __user *in, size_t len, loff_t *off)
 
 		for (i = 0; i < ttp_cpus; i++)
 			storage[i].eventcount = 0;
+		suppress_error = 0;
 		pr_info("ttp: Reset event storage\n");
 	} else if (strncmp(input, "0", len) == 0) {
 		if (ttp_enabled) {
