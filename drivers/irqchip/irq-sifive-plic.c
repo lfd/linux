@@ -6,6 +6,7 @@
 #define pr_fmt(fmt) "riscv-plic: " fmt
 #include <linux/acpi.h>
 #include <linux/cpu.h>
+#include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/irq.h>
@@ -113,6 +114,7 @@ static void __plic_toggle(struct plic_handler *handler, int hwirq, int enable)
 	u32 value;
 
 	value = readl(base + group);
+	udelay(1);
 
 	if (enable)
 		value |= hwirq_mask;
